@@ -4,11 +4,13 @@
 import cv2 as cv
 import numpy as np
 import os
+from scipy.spatial import distance
 
 
 def showImage(image, window_name):
     cv.namedWindow(window_name, cv.WINDOW_NORMAL)
     cv.imshow(window_name, image)
+
 
 
 def cropImage(image):
@@ -32,8 +34,6 @@ def findEdges(image):
             maxsize = cv.contourArea(cnt)
             best = count
         count += 1
-    # cv.drawContours(image, contours, best, (0, 255, 0), 3)
-    # cv.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
     x, y, w, h = cv.boundingRect(contours[best])
     return x, y, w, h
 
@@ -62,16 +62,28 @@ def findAngle(center, x, y):
     return angle
 
 
+def addScaleLegendToImage(image, image_legend):
+    x, y, w, h = findEdges(image)
+    w_image, h_image = (image.shape[0]-10,image.shape[1]-100)
+    pollen_diameter_in_pixel = distance.euclidean((x, y),(w, h))
+    image_scale_in_micra = int((scale/87)*pollen_diameter_in_pixel)
+    cv.line(image,(w_image,h_image),(w_image-image_scale_in_micra,h_image),(0,0,0),20)
+    cv.putText(image, str(image_legend), (100,h_image), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4, cv.LINE_AA)
+    return image
+
+
 while True:
 
-    image_original = cv.imread("/home/jean/Documentos/DevOps/pollen-cropper/base_images/2015_07_07_5723.JPG")
-    rotated_image = rotateImage(image_original)
-    cropped_image = cropImage(rotated_image)
+    image = "base_images/2015_07_07_5723.JPG"
+    image_legend = "10"
+    scale = 10
+    
+    image = cv.imread(image)
+    #image = rotateImage(image)
+    image = cropImage(image)
+    image = addScaleLegendToImage(image, image_legend)
 
-    cv.putText(cropped_image, "Pollen/Spore", (20, 1770), cv.FONT_HERSHEY_SIMPLEX, 2.5, (0, 0, 0), 4, cv.LINE_AA)
-
-    showImage(image_original, "Image")
-    showImage(cropped_image, "Cropped")
+    showImage(image, "Cropped")
 
     key = cv.waitKey(1)
     if key == 27:
