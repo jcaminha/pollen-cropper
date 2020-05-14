@@ -6,19 +6,16 @@ import numpy as np
 import os
 from scipy.spatial import distance
 
-
 def showImage(image, window_name):
     cv.namedWindow(window_name, cv.WINDOW_NORMAL)
     cv.imshow(window_name, image)
-
-
 
 def cropImage(image):
     offset = 100
     x, y, w, h = findEdges(image)
     cropped_image = image[y - offset:(y + h) + offset, x - offset:(x + w) + offset]
+    print('[Image cropped] '+str(image.shape)+' -> '+str(cropped_image.shape))
     return cropped_image
-
 
 def findEdges(image):
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
@@ -29,64 +26,44 @@ def findEdges(image):
     maxsize = 0
     best = 0
     count = 0
+
     for cnt in contours:
         if cv.contourArea(cnt) > maxsize:
             maxsize = cv.contourArea(cnt)
             best = count
         count += 1
     x, y, w, h = cv.boundingRect(contours[best])
+    print('[Edges found] '+ str(x), str(y), str(w), str(h))
     return x, y, w, h
 
 
-def rotateImage(image):
-    x, y, w, h = findEdges(image)
-    # print(x, y, w, h)
-    center_edge = (w / 2, h / 2)
-    degrees = (findAngle(center_edge, (center_edge[0], h), (w, h))) * 100
-    degrees = 0  # 90 - degrees
-    (h, w) = image.shape[:2]
-    center = (w / 2, h / 2)
-    M = cv.getRotationMatrix2D(center, degrees, 1.0)
-    rotated_image = cv.warpAffine(image, M, (w, h))
-    return rotated_image
-
-
-def findAngle(center, x, y):
-    b = np.array(center)
-    a = np.array(x)
-    c = np.array(y)
-    ba = a - b
-    bc = c - b
-    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
-    angle = np.arccos(cosine_angle)
-    return angle
-
-
-def addScaleLegendToImage(image, image_legend):
+def addScaleAndLegendToImage(image, image_legend, scale):
     x, y, w, h = findEdges(image)
     w_image, h_image = (image.shape[0]-10,image.shape[1]-100)
     pollen_diameter_in_pixel = distance.euclidean((x, y),(w, h))
     image_scale_in_micra = int((scale/87)*pollen_diameter_in_pixel)
     cv.line(image,(w_image,h_image),(w_image-image_scale_in_micra,h_image),(0,0,0),20)
     cv.putText(image, str(image_legend), (100,h_image), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4, cv.LINE_AA)
+    print('[Legend added] - '+image_legend)
     return image
 
-
 while True:
-
+    print('[Pollen Cropper] Starting...')
     image = "base_images/2015_07_07_5723.JPG"
     image_legend = "10"
     scale = 10
     
+    print('[Pollen Cropper] Working on image '+image)
     image = cv.imread(image)
-    #image = rotateImage(image)
+    #image = allignImage(image)
     image = cropImage(image)
-    image = addScaleLegendToImage(image, image_legend)
+    image = addScaleAndLegendToImage(image, image_legend, scale)
 
-    showImage(image, "Cropped")
+    showImage(image, image_legend)
 
     key = cv.waitKey(1)
     if key == 27:
         break
 
 cv.destroyAllWindows()
+print('[Pollen Cropper] Finished.')
